@@ -296,5 +296,158 @@ ggplot(sum_corpus, aes(x=speaker, y=mean)) +
 ## Exercises
 
 1. Compute distance measures such as "euclidean" or "manhattan" for the MP tweets as above, comparing between tweets by MPs and tweets by PM, Theresa May. 
+```{r}
+#estimate distance, grouping by username
+euc_dis <- dfmat %>%
+  dfm_group(groups = username) %>%
+  textstat_dist(dfmat, margin = "documents", method = "euclidean")
+
+#convert to a matrix
+eucmat <- as.matrix(euc_dis)
+
+#generate data frame keeping only the row for Theresa May
+eucmatdf <- as.data.frame(eucmat[23, c(1:22, 24)])
+
+#rename column
+colnames(eucmatdf) <- "distance_may"
+  
+#create column variable from rownames
+eucmatdf <- tibble::rownames_to_column(eucmatdf, "username")
+
+#plot
+ggplot(eucmatdf) +
+  geom_point(aes(x=reorder(username, -distance_may), y= distance_may)) + 
+  coord_flip() +
+  xlab("MP username") +
+  ylab("euclidean distance score") + 
+  theme_minimal()
+
+#manhattan
+man_dis <- dfmat %>%
+  dfm_group(groups = username) %>%
+  textstat_dist(dfmat, margin = "documents", method = "manhattan")
+
+manmat <- as.matrix(man_dis)
+
+manmatdf <- as.data.frame(manmat[23, c(1:22, 24)])
+
+colnames(manmatdf) <- "distance_may"
+
+manmatdf <- tibble::rownames_to_column(manmatdf, "username")
+
+ggplot(manmatdf) +
+  geom_point(aes(x=reorder(username, -distance_may), y= distance_may)) + 
+  coord_flip() +
+  xlab("MP username") +
+  ylab("manhattan distance score") + 
+  theme_minimal()
+```
+
 2. Estimate at least three other complexity measures for the EU speeches as above. Consider how the results compare to the Flesch-Kincaid measure used in the article by @schoonvelde_liberals_2019.
+
+McLaughlin (1969) “Simple Measure of Gobbledygook, which is based on the recurrence of words with 3 syllables or more and is calculated as:{:}{Simple Measure of Gobbledygook (SMOG) (McLaughlin 1969).where = Nwmin3sy = the number of words with 3 syllables or more. This measure is regression equation D in McLaughlin’s original paper.}
+```{r}
+# Estimate complexity measures for EU speeches
+speeches$smog <- textstat_readability(speeches$text, measure = "SMOG")
+
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$smog <- speeches$smog$SMOG
+
+#get mean and standard deviation of SMOG, and N of speeches for each speaker
+sum_corpus_smog <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(smog, na.rm=TRUE),
+                   SD=sd(smog, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus_smog$se <- sum_corpus_smog$SD / sqrt(sum_corpus_smog$N)
+sum_corpus_smog$min <- sum_corpus_smog$mean - 1.96*sum_corpus_smog$se
+sum_corpus_smog$max <- sum_corpus_smog$mean + 1.96*sum_corpus_smog$se
+
+#tidy data
+sum_corpus
+
+#plot
+ggplot(sum_corpus_smog, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus_smog$min,ymax=sum_corpus_smog$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+```
+
+Automated readability index (ARI): This index assesses the readability of a text by considering the average number of characters per word and the average number of words per sentence.
+```{r}
+# Estimate complexity measures for EU speeches
+speeches$ari <- textstat_readability(speeches$text, measure = "ARI")
+
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$ari <- speeches$ari$ARI
+
+#get mean and standard deviation of SMOG, and N of speeches for each speaker
+sum_corpus_ari <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(ari, na.rm=TRUE),
+                   SD=sd(ari, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus_ari$se <- sum_corpus_ari$SD / sqrt(sum_corpus_ari$N)
+sum_corpus_ari$min <- sum_corpus_ari$mean - 1.96*sum_corpus_ari$se
+sum_corpus_ari$max <- sum_corpus_ari$mean + 1.96*sum_corpus_ari$se
+
+#tidy data
+sum_corpus
+
+#plot
+ggplot(sum_corpus_ari, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus_ari$min,ymax=sum_corpus_ari$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+```
+
+Gunning fog index: This measure estimates the readability of a text by considering the average number of words per sentence and the percentage of words with three or more syllables.
+```{r}
+# Estimate complexity measures for EU speeches
+speeches$fog <- textstat_readability(speeches$text, measure = "FOG")
+
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$fog <- speeches$fog$FOG
+
+#get mean and standard deviation of SMOG, and N of speeches for each speaker
+sum_corpus_fog <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(fog, na.rm=TRUE),
+                   SD=sd(fog, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus_fog$se <- sum_corpus_fog$SD / sqrt(sum_corpus_fog$N)
+sum_corpus_fog$min <- sum_corpus_fog$mean - 1.96*sum_corpus_fog$se
+sum_corpus_fog$max <- sum_corpus_fog$mean + 1.96*sum_corpus_fog$se
+
+#tidy data
+sum_corpus
+
+#plot
+ggplot(sum_corpus_fog, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus_fog$min,ymax=sum_corpus_fog$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+```
+
 3. (Advanced---optional) Estimate similarity scores between the MP tweets and the PM tweets for each week contained in the data. Plot the results. 
